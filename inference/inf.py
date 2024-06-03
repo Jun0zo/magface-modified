@@ -60,6 +60,8 @@ def main(feat_list_file):
     plt.show()
 
 
+# python inf.py --feat_file sample_data/anony-drone/AI/face_embedding/results/bright_long/feat.list
+# feat_file에 있는 절대경로를 수정해야 함!!
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Feature Visualization')
     parser.add_argument('--feat_file', type=str, default='toy_imgs/feat.list')
