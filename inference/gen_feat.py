@@ -1,27 +1,27 @@
 #!/usr/bin/env python
+import os
+import pprint
+import time
+import warnings
+import numpy as np
+import argparse
+import torch
+import torchvision
+import torch.utils.data.distributed
+import torch.distributed as dist
+import torch.multiprocessing as mp
+import torch.nn.functional as F
+import torch.utils.data as data
+from torchvision import transforms
+from torchvision import datasets
+from termcolor import cprint
+import cv2
+from network_inf import builder_inf
+from utils import utils
 import sys
 sys.path.append("..")
 sys.path.append("../../")
 
-from utils import utils
-from network_inf import builder_inf
-import cv2
-from termcolor import cprint
-from torchvision import datasets
-from torchvision import transforms
-import torch.utils.data as data
-import torch.nn.functional as F
-import torch.multiprocessing as mp
-import torch.distributed as dist
-import torch.utils.data.distributed
-import torchvision
-import torch
-import argparse
-import numpy as np
-import warnings
-import time
-import pprint
-import os
 
 # parse the args
 cprint('=> parse the args ...', 'green')
@@ -45,7 +45,8 @@ parser.add_argument('--resume', default=None, type=str, metavar='PATH',
 parser.add_argument('-p', '--print-freq', default=100, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--cpu-mode', action='store_true', help='Use the CPU.')
-parser.add_argument('--dist', default=1, help='use this if model is trained with dist')
+parser.add_argument('--dist', default=1,
+                    help='use this if model is trained with dist')
 args = parser.parse_args()
 
 
@@ -57,8 +58,19 @@ class ImgInfLoader(data.Dataset):
         self.init()
 
     def init(self):
-        with open(self.ann_file) as f:
-            self.imgs = f.readlines()
+        if os.path.isfile(self.ann_file):
+            with open(self.ann_file) as f:
+                self.imgs = f.readlines()
+        elif os.path.isdir(self.ann_file):
+            self.imgs = []
+            for root, dirs, files in os.walk(self.ann_file):
+                for file in files:
+                    if file.endswith('.jpg') or file.endswith('.png'):
+                        print('file name :', file)
+                        # relative path to absolute path
+                        root = os.path.abspath(root)
+                        print('abs path :', os.path.join(root, file))
+                        self.imgs.append(os.path.join(root, file))
 
     def __getitem__(self, index):
         ls = self.imgs[index].strip().split()
@@ -96,6 +108,7 @@ def main_worker(ngpus_per_node, args):
     cprint('=> building the dataloader ...', 'green')
     trans = transforms.Compose([
         transforms.ToTensor(),
+        transforms.Resize((112, 112)),
         transforms.Normalize(
             mean=[0., 0., 0.],
             std=[1., 1., 1.]),
@@ -157,6 +170,7 @@ def main_worker(ngpus_per_node, args):
     fio.close()
 
 
+# python3 gen_feat.py --inf_list toy_imgs/img.list --feat_list toy_imgs/feat.list --resume magface_epoch_00025.pth --cpu-mode
 if __name__ == '__main__':
     # parse the args
     cprint('=> parse the args ...', 'green')
