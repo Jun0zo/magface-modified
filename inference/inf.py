@@ -18,6 +18,9 @@ def main(feat_list_file):
 
     img_2_feats = {}
     img_2_mag = {}
+    img_2_nidx = {}
+
+    nidx_2_mag = {}
     for line in lines:
         parts = line.strip().split(' ')
         imgname = parts[0]
@@ -25,13 +28,19 @@ def main(feat_list_file):
         mag = np.linalg.norm(feats)
         img_2_feats[imgname] = feats / mag
         img_2_mag[imgname] = mag
+        img_2_nidx[imgname] = int(imgname.split(
+            '/')[-1].split('.')[0].split('_')[0])
+
+        nidx_2_mag[img_2_nidx[imgname]] = mag
 
     imgnames = list(img_2_mag.keys())
+    # sort names
     for imgname in imgnames:
         # print('imgname :', imgname.split('/')[-1])
         pass
+
     mags = [img_2_mag[imgname] for imgname in imgnames]
-    print('mags : ', mags)
+    # print('mags : ', mags)
     sort_idx = np.argsort(mags)
 
     H, W = 224, 224
@@ -46,7 +55,6 @@ def main(feat_list_file):
     for i, ele in enumerate(sort_idx):
         img_full_path = imgnames[ele]
         imgname = '/'.join(imgnames[ele].split('/')[-2:])
-        print('image name :', imgname)
         img = cv2.imread(img_full_path)
         img = cv2.resize(img, (W, H))
         y_offset = int(i / NW) * H
@@ -54,7 +62,7 @@ def main(feat_list_file):
         canvas[y_offset: y_offset + H, x_offset: x_offset + W, :] = img
 
     plt.figure(figsize=(10, 10))
-    print([float('{0:.2f}'.format(mags[idx_])) for idx_ in sort_idx])
+    # print([float('{0:.2f}'.format(mags[idx_])) for idx_ in sort_idx])
     imshow(canvas)
 
     feats = np.array([img_2_feats[imgnames[ele]] for ele in sort_idx])
@@ -62,6 +70,14 @@ def main(feat_list_file):
 
     fig, ax = plt.subplots(figsize=(8, 6))
     ax = sns.heatmap(sim_mat, cmap="PuRd", annot=True)
+
+    nidx = [img_2_nidx[imgname] for imgname in imgnames]
+    sort_nidx = np.argsort(nidx)
+    print('sort_nidx : ', sort_nidx)
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    plt.bar(range(len(sort_nidx)), [
+            nidx_2_mag[nidx[idx_]] for idx_ in sort_nidx])
 
     plt.show()
 
